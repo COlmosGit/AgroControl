@@ -1,0 +1,7 @@
+[submodule "dependencias/pico-sdk"]
+	path = dependencias/pico-sdk
+	url = https://github.com/raspberrypi/pico-sdk.git
+	branch = master
+[submodule "dependencias/FreeRTOS-Kernel"]
+	path = dependencias/FreeRTOS-Kernel
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
