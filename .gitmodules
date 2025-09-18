@@ -5,3 +5,6 @@
 [submodule "dependencias/FreeRTOS-Kernel"]
 	path = dependencias/FreeRTOS-Kernel
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+[submodule "lib/FreeRTOS-Kernel"]
+	path = lib/FreeRTOS-Kernel
+	url = https://github.com/raspberrypi/FreeRTOS-Kernel.git
