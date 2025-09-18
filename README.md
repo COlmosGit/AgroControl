@@ -42,27 +42,41 @@ El sistema AgroControl en su primera versión abarcará la medición y control a
 # Archivos del Proyecto
 
 AgroControl/
+
 ├── CMakeLists.txt
+
 ├── FreeRTOS_Kernel_import.cmake
+
 ├── pico_extras_import_optional.cmake
+
 ├── pico_sdk_import.cmake
+
 ├── dht/
-│   ├── CMakeLists.txt        
+        
+        │   ├── CMakeLists.txt        
+
 │   ├── dht.c        
+
 │   ├── dht.pio           
+
 │   └── include/ 
-│       └── dht.h          
+        
+        │       └── dht.h          
+
 ├── src/
-│   ├── main.c
-│   ├── include/
-│   │   └── FreeRTOSConfig.h    
-│   ├── wifi_init.c
-│   ├── wifi_init.h
-│   ├── http_server.c
-│   ├── http_server.h
-│   ├── dashboard_html.h
-│   └── CMakeLists.txt 
+    
+    │   ├── main.c
+    │   ├── include/
+        │   │   └── FreeRTOSConfig.h    
+        │   ├── wifi_init.c
+        │   ├── wifi_init.h
+        │   ├── http_server.c
+        │   ├── http_server.h
+        │   ├── dashboard_html.h
+        │   └── CMakeLists.txt 
+
 └── dashboard/
+    
     └── dashboard_agrocontrol_v1-0.html
 
 
