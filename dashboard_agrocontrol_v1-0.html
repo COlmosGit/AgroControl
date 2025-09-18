@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard AgroControl - Control Ambiental Invernadero</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f8; }
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { margin: 0; }
+    .cards {
+        display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 30px;
+    }
+    .card {
+        background: white; padding: 15px; border-radius: 8px; width: 150px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    .card h2, .card p {
+        margin: 4px 0 0;
+    }
+    .status {
+        font-weight: bold;
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: white;
+        display: inline-block;
+        margin-top: 5px;
+    }
+    .status.on {
+        background-color: green;
+    }
+    .status.off {
+        background-color: red;
+    }
+    #charts-container {
+        display: flex; flex-wrap: wrap; gap: 30px; justify-content: center;
+    }
+    canvas { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    #alerts {
+        max-width: 600px; margin: 30px auto; padding: 15px; background: #ffefef; border-radius: 8px; color: #c00;
+        font-weight: bold; display: none;
+        text-align: center;
+    }
+    #extra-visualizations {
+        max-width: 900px; margin-left:auto; margin-right:auto;
+        margin-top: 40px;
+    }
+    #extra-visualizations h3 {
+        text-align: center; margin-bottom: 20px;
+    }
+    #extra-visualizations h4 {
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    #extra-visualizations table {
+        width: 100%; border-collapse: collapse; text-align:center;
+    }
+    #extra-visualizations th, #extra-visualizations td {
+        border: 1px solid #ddd; padding: 8px;
+    }
+    #extra-visualizations th {
+        background-color: #f0f0f0;
+    }
+    #actuators {
+        max-width: 600px; margin: 40px auto; background: white; padding: 20px; border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    #actuators h3 {
+        margin-bottom: 20px;
+    }
+    #actuators div.status-display {
+        margin: 10px 0;
+        font-size: 1.2em;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>AgroControl - Panel Principal </h1>
+    <p>Conexión: <span id="connection-status">Conectado</span></p>
+</header>
+
+<section class="cards" id="summary-cards">
+    <div class="card">
+        <h2 id="temp">-- °C</h2>
+        <p>Temperatura</p>
+    </div>
+    <div class="card">
+        <h2 id="humidity">-- %</h2>
+        <p>Humedad (Relativa)</p>
+    </div>
+    <div class="card">
+        <h2 id="soilHumidity">-- %</h2>
+        <p>Humedad Suelo</p>
+    </div>
+    <div class="card">
+        <h2 id="lux">-- lux</h2>
+        <p>Luminosidad</p>
+    </div>
+    <div class="card">
+        <h2 id="co2">-- ppm</h2>
+        <p>CO₂</p>
+    </div>
+</section>
+
+<section id="charts-container">
+    <canvas id="tempHumChart" width="400" height="200"></canvas>
+    <canvas id="luxCo2Chart" width="400" height="200"></canvas>
+</section>
+
+<section id="extra-visualizations">
+    <h3>Visualizaciones Adicionales</h3>
+
+    <div style="display:flex; justify-content: space-around; flex-wrap: wrap; gap: 30px;">
+        <div>
+            <h4>Humedad Relativa (%) - Distribución</h4>
+            <canvas id="humidityPieChart" width="250" height="250"></canvas>
+        </div>
+
+        <div>
+            <h4>Temperatura (°C) - Indicador</h4>
+            <canvas id="tempGauge" width="250" height="250"></canvas>
+        </div>
+
+        <div>
+            <h4>CO₂ (ppm) - Indicador</h4>
+            <canvas id="co2Gauge" width="250" height="250"></canvas>
+        </div>
+    </div>
+
+    <h4 style="margin-top: 30px;">Últimos 5 Valores registrados</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Temperatura (°C)</th>
+                <th>Humedad (%)</th>
+                <th>Humedad Suelo (%)</th>
+                <th>Luminosidad (lux)</th>
+                <th>CO₂ (ppm)</th>
+            </tr>
+        </thead>
+        <tbody id="history-table-body">
+        </tbody>
+    </table>
+</section>
+
+<section id="actuators">
+    <h3>Estado de Actuadores</h3>
+    <div class="status-display">
+        Aire Acondicionado: <span id="ac-status" class="status off">Apagado</span>
+    </div>
+    <div class="status-display">
+        Ventiladores: <span id="fan-status" class="status off">Apagado</span>
+    </div>
+    <div class="status-display">
+        Sistema de Riego: <span id="irrigation-status" class="status off">Apagado</span>
+    </div>
+    <div class="status-display">
+        Cortinas: <span id="curtain-status" class="status off">Apagado</span>
+    </div>
+</section>
+
+<section id="alerts">
+    Alerta: una o más variables fuera de rango óptimo.
+</section>
+
+<script>
+    // Variables para simular día/noche y humedad de suelo
+    let isDay = true; // Se alterna cada ciclo para simular día y noche
+
+    // Historial de datos para tabla
+    let historyData = [];
+
+    // Simula el estado de actuadores
+    function getSimulatedActuators() {
+        // Simula estados aleatorios para actuadores
+        return {
+            airConditioner: Math.random() > 0.6,
+            fans: Math.random() > 0.5,
+            irrigation: Math.random() > 0.7,
+            curtains: Math.random() > 0.4
+        };
+    }
+
+    function getSimulatedData() {
+        // Simulación de datos, posibles valores fuera de rango para probar alertas
+        const temperature = +(15 + Math.random() * 15).toFixed(1);
+        const humidity = isDay ? +(75 + Math.random() * 10).toFixed(1) : +(60 + Math.random() * 20).toFixed(1);
+        const soilHumidity = +(40 + Math.random() * 50).toFixed(1);
+        const lux = +(10000 + Math.random() * 85000).toFixed(0);
+        const co2 = +(600 + Math.random() * 600).toFixed(0);
+        const actuators = getSimulatedActuators();
+
+        return { temperature, humidity, soilHumidity, lux, co2, actuators };
+    }
+
+    function updateDashboard(data) {
+        document.getElementById('temp').textContent = data.temperature + ' °C';
+        document.getElementById('humidity').textContent = data.humidity + ' %';
+        document.getElementById('soilHumidity').textContent = data.soilHumidity + ' %';
+        document.getElementById('lux').textContent = data.lux + ' lux';
+        document.getElementById('co2').textContent = data.co2 + ' ppm';
+
+        validateRange('temp', data.temperature, 15, 25);
+        validateRange('humidity', data.humidity, isDay ? 75 : 65, isDay ? 80 : 75);
+        validateRange('soilHumidity', data.soilHumidity, 40, 80);
+        validateRange('lux', data.lux, 10000, 95000);
+        validateRange('co2', data.co2, 700, 1000);
+
+        updateActuatorStatus('ac-status', data.actuators.airConditioner);
+        updateActuatorStatus('fan-status', data.actuators.fans);
+        updateActuatorStatus('irrigation-status', data.actuators.irrigation);
+        updateActuatorStatus('curtain-status', data.actuators.curtains);
+
+        // Manejo de alerta general
+        const alertBox = document.getElementById('alerts');
+        if (
+            data.temperature < 15 || data.temperature > 25 ||
+            !(data.humidity >= (isDay ? 75 : 65) && data.humidity <= (isDay ? 80 : 75)) ||
+            data.soilHumidity < 40 || data.soilHumidity > 80 ||
+            data.lux < 10000 || data.lux > 95000 ||
+            data.co2 < 700 || data.co2 > 1000
+        ) {
+            alertBox.style.display = 'block';
+        } else {
+            alertBox.style.display = 'none';
+        }
+    }
+
+    function updateActuatorStatus(id, isOn) {
+        const el = document.getElementById(id);
+        if (isOn) {
+            el.textContent = 'Encendido';
+            el.classList.remove('off');
+            el.classList.add('on');
+        } else {
+            el.textContent = 'Apagado';
+            el.classList.remove('on');
+            el.classList.add('off');
+        }
+    }
+
+    function validateRange(id, value, min, max) {
+        const el = document.getElementById(id);
+        if (value < min || value > max) {
+            el.style.color = 'red';
+            el.style.fontWeight = 'bold';
+        } else {
+            el.style.color = 'green';
+            el.style.fontWeight = 'normal';
+        }
+    }
+
+    // Gráficos Chart.js configurados
+
+    // Temperatura y Humedad (línea)
+    const ctxTempHum = document.getElementById('tempHumChart').getContext('2d');
+    const tempHumChart = new Chart(ctxTempHum, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Temperatura (°C)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    data: [],
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: 'Humedad (%)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    data: [],
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: { responsive: true, animation: false, scales: { y: { beginAtZero: false } } }
+    });
+
+    // Luminosidad y CO2 (barras horizontales)
+    const ctxLuxCo2 = document.getElementById('luxCo2Chart').getContext('2d');
+    const luxCo2Chart = new Chart(ctxLuxCo2, {
+        type: 'bar',
+        data: {
+            labels: ['Luminosidad (lux)', 'CO₂ (ppm)'],
+            datasets: [{
+                label: 'Valor',
+                backgroundColor: ['rgb(255, 205, 86)', 'rgb(75, 192, 192)'],
+                data: [0, 0]
+            }]
+        },
+        options: {
+            responsive: true, animation: false, indexAxis: 'y',
+            scales: { x: { beginAtZero: true } }
+        }
+    });
+
+    // Gráfico pastel para humedad relativa
+    const ctxHumidityPie = document.getElementById('humidityPieChart').getContext('2d');
+    const humidityPieChart = new Chart(ctxHumidityPie, {
+        type: 'doughnut',
+        data: {
+            labels: ['Humedad', 'Resto al 100%'],
+            datasets: [{
+                data: [0, 100],
+                backgroundColor: ['#36a2eb', '#e0e0e0'],
+                hoverOffset: 30
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '70%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+    });
+
+    // Función para crear gauge tipo doughnut para temperatura y CO2
+    function createGaugeChart(ctx, label, value, maxValue, color) {
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [label, ''],
+                datasets: [{
+                    data: [value, maxValue - value],
+                    backgroundColor: [color, '#e0e0e0'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                circumference: 180,
+                rotation: 270,
+                cutout: '70%',
+                responsive: true,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+            }
+        });
+    }
+
+    // Gauges para temperatura y CO2
+    const ctxTempGauge = document.getElementById('tempGauge').getContext('2d');
+    const tempGauge = createGaugeChart(ctxTempGauge, 'Temperatura', 0, 40, 'rgb(255, 99, 132)');
+    const ctxCo2Gauge = document.getElementById('co2Gauge').getContext('2d');
+    const co2Gauge = createGaugeChart(ctxCo2Gauge, 'CO₂', 0, 2000, 'rgb(75, 192, 192)');
+
+    // Función para actualizar gráficos de líneas y barras
+    function updateCharts(data) {
+        const timeLabel = new Date().toLocaleTimeString();
+
+        // Mantener máximo 20 etiquetas para los gráficos
+        if (tempHumChart.data.labels.length >= 20) {
+            tempHumChart.data.labels.shift();
+            tempHumChart.data.datasets[0].data.shift();
+            tempHumChart.data.datasets[1].data.shift();
+        }
+        tempHumChart.data.labels.push(timeLabel);
+        tempHumChart.data.datasets[0].data.push(data.temperature);
+        tempHumChart.data.datasets[1].data.push(data.humidity);
+        tempHumChart.update();
+
+        luxCo2Chart.data.datasets[0].data[0] = data.lux;
+        luxCo2Chart.data.datasets[0].data[1] = data.co2;
+        luxCo2Chart.update();
+
+        return timeLabel;
+    }
+
+    // Actualizar visualizaciones adicionales (pie, gauges y tabla)
+    function updateExtraVisualizations(data, timeLabel) {
+        humidityPieChart.data.datasets[0].data[0] = data.humidity;
+        humidityPieChart.data.datasets[0].data[1] = 100 - data.humidity;
+        humidityPieChart.update();
+
+        tempGauge.data.datasets[0].data[0] = data.temperature;
+        tempGauge.data.datasets[0].data[1] = 40 - data.temperature;
+        tempGauge.update();
+
+        co2Gauge.data.datasets[0].data[0] = data.co2;
+        co2Gauge.data.datasets[0].data[1] = 2000 - data.co2;
+        co2Gauge.update();
+
+        // Guardar histórico y actualizar tabla
+        if (historyData.length >= 5) {
+            historyData.shift();
+        }
+        historyData.push({time: timeLabel, ...data});
+        renderHistoryTable();
+    }
+
+    // Renderizar tabla de histórico
+    function renderHistoryTable() {
+        const tbody = document.getElementById('history-table-body');
+        tbody.innerHTML = '';
+        historyData.slice().reverse().forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.time}</td>
+                <td>${item.temperature.toFixed(1)}</td>
+                <td>${item.humidity.toFixed(1)}</td>
+                <td>${item.soilHumidity.toFixed(1)}</td>
+                <td>${item.lux}</td>
+                <td>${item.co2}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Alternar día/noche para humedad
+    let toggleDayNight = true;
+    function refreshDashboard() {
+        toggleDayNight = !toggleDayNight;
+        isDay = toggleDayNight;
+        const newData = getSimulatedData();
+        const timeLabel = updateCharts(newData);
+        updateDashboard(newData);
+        updateExtraVisualizations(newData, timeLabel);
+    }
+
+    refreshDashboard();
+    setInterval(refreshDashboard, 5000);
+
+</script>
+
+</body>
+</html>
+

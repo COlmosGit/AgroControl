@@ -1,0 +1,7 @@
+/home/charly/pico/pico_dht/build/_deps/picotool/picotool
+/home/charly/pico/pico_dht/build/_deps/picotool/picotoolTargets.cmake
+/home/charly/pico/pico_dht/build/_deps/picotool/picotoolTargets-release.cmake
+/home/charly/pico/pico_dht/build/_deps/picotool/picotoolConfig.cmake
+/home/charly/pico/pico_dht/build/_deps/picotool/picotoolConfigVersion.cmake
+/home/charly/pico/pico_dht/build/_deps/picotool/enc_bootloader.elf
+/home/charly/pico/pico_dht/build/_deps/picotool/enc_bootloader_mbedtls.elf
