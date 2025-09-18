@@ -41,31 +41,29 @@ El sistema AgroControl en su primera versión abarcará la medición y control a
 
 # Archivos del Proyecto
 
-Agrocontrol
-
-├─ .git/
-
-├─ .gitmodules
-
-├─ CMakeLists.txt # CMake raíz que incluye los subdirs
-
-├─ src/
-
-    │ ├─ main.c
-    │ ├─ tasks/ # tasks FreeRTOS: sensor_read_task.c, control_task.c, comms_task.c
-    │ └─ drivers/ # drivers de sensores (I2C, ADC, UART)
-
-├─ include/
-
-    │ └─ FreeRTOSConfig.h
-    
-├─ third_party/
-
-    │ ├─ pico-sdk/ # submódulo
-    │ └─ FreeRTOS-Kernel/ # submódulo
-    
-└─ build/
-
+AgroControl/
+├── CMakeLists.txt
+├── FreeRTOS_Kernel_import.cmake
+├── pico_extras_import_optional.cmake
+├── pico_sdk_import.cmake
+├── dht/
+│   ├── CMakeLists.txt        
+│   ├── dht.c        
+│   ├── dht.pio           
+│   └── include/ 
+│       └── dht.h          
+├── src/
+│   ├── main.c
+│   ├── include/
+│   │   └── FreeRTOSConfig.h    
+│   ├── wifi_init.c
+│   ├── wifi_init.h
+│   ├── http_server.c
+│   ├── http_server.h
+│   ├── dashboard_html.h
+│   └── CMakeLists.txt 
+└── dashboard/
+    └── dashboard_agrocontrol_v1-0.html
 
 
 
@@ -173,7 +171,7 @@ _Integración de energía renovable y optimización energética.
 
 _Desarrollo de un sistema de mantenimiento predictivo con alertas anticipadas de fallas en hardware.
 
-
 _Soporte para redes LoRa o 5G para ampliar la conectividad del sistema en zonas remotas.
 
+_Agregar ejecución concurrente asignando un núcleo al control de sensores y el otro a correr un servidor web embebido con conectividad Wi-Fi integrada.
 
